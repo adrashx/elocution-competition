@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #333;
+            overflow: hidden;
+        }
+        
+        #pdfContainer {
+            width: 100vw;
+            height: 100vh;
+            overflow: auto;
+            background-color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: white;
+            margin-top: 20vh;
+        }
+        
+        canvas {
+            display: block;
+            margin: 0 auto;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .download-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #2b007c;
+            color: #000;
+            padding: 12px 24px;
+            border: 2px solid #000;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+            z-index: 1000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .download-button:hover {
+            background-color: #4B0082;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="pdfContainer">
+        <div class="loading">Loading PDF...</div>
+    </div>
+    
+    <a href="https://forms.gle/A3eo1Wi2mExrBV2k8" class="download-button" target="_blank">
+        REGISTER
+    </a>
+
+    <script>
+        // Set up PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Load and display the PDF
+        const loadingTask = pdfjsLib.getDocument('download.pdf');
+        
+        loadingTask.promise.then(function(pdf) {
+            const container = document.getElementById('pdfContainer');
+            container.innerHTML = '';
+            
+            // Calculate scale to fit the PDF properly
+            function calculateScale(page) {
+                const viewport = page.getViewport({scale: 1});
+                const containerWidth = window.innerWidth - 40; // 20px padding on each side
+                const containerHeight = window.innerHeight - 40;
+                
+                const scaleX = containerWidth / viewport.width;
+                const scaleY = containerHeight / viewport.height;
+                
+                // Use the smaller scale to ensure PDF fits completely
+                return Math.min(scaleX, scaleY, 2); // Max scale of 2 for readability
+            }
+            
+            // Render all pages
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                pdf.getPage(pageNum).then(function(page) {
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    const scale = calculateScale(page);
+                    const viewport = page.getViewport({scale: scale});
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    
+                    page.render(renderContext);
+                    container.appendChild(canvas);
+                });
+            }
+        }).catch(function(error) {
+            document.getElementById('pdfContainer').innerHTML = 
+                '<div class="loading">Error loading PDF. <a href="download.pdf" target="_blank" style="color: #007bff;">Click here to download</a></div>';
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // Reload the PDF when window is resized
+            location.reload();
+        });
+    </script>
+</body>
+</html>
